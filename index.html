@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جستجوی لیست</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            font-family: Vazirmatn, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: Vazirmatn;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        .search-box:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background-color: #f1f7ff;
+        }
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .no-result {
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>لیست اسامی</h2>
+    
+    <input type="text" id="searchInput" class="search-box" placeholder="جستجو در نام، نام خانوادگی، نام پدر یا کد ملی...">
+    
+    <div id="status" class="status">در حال بارگذاری داده‌ها...</div>
+
+    <div class="table-container">
+        <table id="dataTable">
+            <thead>
+                <tr id="tableHeader">
+                    </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+    </div>
+    <div id="noResult" class="no-result" style="display: none;">موردی یافت نشد.</div>
+</div>
+
+<script>
+    let allData = [];
+    const searchInput = document.getElementById('searchInput');
+    const tableBody = document.getElementById('tableBody');
+    const tableHeader = document.getElementById('tableHeader');
+    const statusDiv = document.getElementById('status');
+    const noResult = document.getElementById('noResult');
+
+    // تابع خواندن فایل CSV
+    async function fetchCSV() {
+        try {
+            const response = await fetch('asamie-janbakhtegan.csv');
+            if (!response.ok) throw new Error('فایل یافت نشد.');
+            
+            const reader = response.body.getReader();
+            const result = await reader.read();
+            const decoder = new TextDecoder('utf-8');
+            const csvText = decoder.decode(result.value);
+            
+            parseCSV(csvText);
+        } catch (error) {
+            statusDiv.innerText = 'خطا در بارگذاری فایل: ' + error.message;
+            statusDiv.style.color = 'red';
+        }
+    }
+
+    // تبدیل متن CSV به آرایه
+    function parseCSV(text) {
+        const lines = text.split('\n');
+        if (lines.length === 0) return;
+
+        // استخراج هدرها
+        const headers = lines[0].split(',').map(h => h.trim());
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.innerText = header;
+            tableHeader.appendChild(th);
+        });
+
+        // استخراج داده‌ها
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            const columns = lines[i].split(',').map(c => c.trim());
+            allData.push(columns);
+        }
+
+        statusDiv.innerText = `تعداد کل ردیف‌ها: ${allData.length}`;
+        displayData(allData);
+    }
+
+    // نمایش داده‌ها در جدول
+    function displayData(data) {
+        tableBody.innerHTML = '';
+        if (data.length === 0) {
+            noResult.style.display = 'block';
+            return;
+        }
+        noResult.style.display = 'none';
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach(col => {
+                const td = document.createElement('td');
+                td.innerText = col;
+                tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // عملیات جستجو
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredData = allData.filter(row => 
+            row.some(cell => cell.toLowerCase().includes(searchTerm))
+        );
+        displayData(filteredData);
+        statusDiv.innerText = `تعداد یافت شده: ${filteredData.length}`;
+    });
+
+    // شروع عملیات
+    fetchCSV();
+</script>
+
+</body>
+</html>
